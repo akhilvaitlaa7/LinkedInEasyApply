@@ -1,0 +1,7 @@
+{
+    "email" : "linkedInEmailAddress",
+    "password" : "password",
+    "keywords" : "Java Software engineer",
+    "location" : "California",
+    "driver_path" : "driver/chromedriver"
+}
