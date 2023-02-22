@@ -6,6 +6,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import openpyxl
 import time
 import json
 import re
@@ -88,14 +89,10 @@ class EasyApply:
             print(total_jobs)
             #iterate through all pages and apply
             for page_number in range(25,total_jobs+25,25):
-                print("In for loop")
                 self.driver.get(current_page+"&start="+str(page_number))
-                print("ok")
                 time.sleep(2)
                 results_ext = self.driver.find_elements_by_class_name("ember-view.jobs-search-results__list-item.occludable-update.p0.relative.scaffold-layout__list-item")
                 for result_ext in results_ext:
-                    # self.driver.implicitly_wait(10)
-                    # ActionChains(self.driver).move_to_element(result_ext).click(result_ext).perform()
                     hover_ext = ActionChains(self.driver).move_to_element(result_ext)
                     hover_ext.perform()
                     titles_ext = result_ext.find_elements_by_class_name("disabled.ember-view.job-card-container__link.job-card-list__title")
@@ -108,30 +105,27 @@ class EasyApply:
     def submit_application(self,job_ad):
         print("You are applying to position:",job_ad.text)
         job_ad.click()
-        #job_ad.send_keys(Keys.RETURN)
         time.sleep(2)
         
         # try to click easy apply or skip if already applied
         try:
             in_apply = self.driver.find_element_by_class_name("jobs-apply-button.artdeco-button.artdeco-button--3.artdeco-button--primary.ember-view")
             in_apply.click()
-            #in_apply.send_keys(Keys.RETURN)
+            time.sleep(1)
         except NoSuchElementException:
             print("Already applied to this position")
             return
         
-        time.sleep(1)
         #try if next step is available
         try:
-            print("1st step")
             next = self.driver.find_element_by_xpath("//button[@aria-label='Continue to next step']")
             next.click()
             time.sleep(2)
         except NoSuchElementException:
             pass
         
+        # selecting resume
         try:
-            print("2st step")
             choose_resume = self.driver.find_element_by_xpath("//button[@aria-label='Choose Resume']")
             choose_resume.send_keys(Keys.RETURN)
             time.sleep(1)
@@ -141,90 +135,37 @@ class EasyApply:
         except NoSuchElementException:
             pass
         
+        #next
         try:
-            print("3st step")
             next_next = self.driver.find_element_by_xpath("//button[@aria-label='Continue to next step']")
             next_next.send_keys(Keys.RETURN)
             time.sleep(1)
         except NoSuchElementException:
             pass
         
+        #review
         try:
-            print("4st step")
             review = self.driver.find_element_by_xpath("//button[@aria-label='Review your application']")
             review.send_keys(Keys.RETURN)
             time.sleep(1)
         except NoSuchElementException:
             pass
         
+        #submit button
         try:
-            print("5st step")
-            print("trying submit")
             submit = self.driver.find_element_by_xpath("//button[@aria-label='Submit application']")
             submit.send_keys(Keys.RETURN)
             time.sleep(2)
             print("Application submission done")
             close_confirm = self.driver.find_element_by_xpath("//button[@aria-label='Dismiss']")
             close_confirm.send_keys(Keys.RETURN)
+            
         #if submit is not available, discard the application
         except NoSuchElementException:
-            print("6st step")
             print("Not a direct application")
+            
             self.close_application() 
-        
-    def submit_application1(self, job_ad):
-        print("You are applying to position:", job_ad.text)
-        job_ad.click()
-        time.sleep(2)
-
-        try:
-            in_apply = self.driver.find_element_by_class_name("jobs-apply-button.artdeco-button.artdeco-button--3.artdeco-button--primary.ember-view")
-            in_apply.click()
-        except NoSuchElementException:
-            print("Already applied to this position")
-            return
-
-        time.sleep(1)
-
-        try:
-            other_element = self.driver.find_element_by_xpath("//div[@class='ph5']")
-            wait = WebDriverWait(self.driver, 20)
-            wait.until(EC.invisibility_of_element_located((By.XPATH, "//div[@class='ph5']")))
-
-            next = self.driver.find_element_by_xpath("//button[@aria-label='Continue to next step']")
-            next.send_keys(Keys.RETURN)
-            time.sleep(1)
-        except NoSuchElementException:
-            try:
-                choose_resume = self.driver.find_element_by_xpath("//button[@aria-label='Choose Resume']")
-                choose_resume.send_keys(Keys.RETURN)
-                time.sleep(1)
-                next_next = self.driver.find_element_by_xpath("//button[@aria-label='Continue to next step']")
-                next_next.send_keys(Keys.RETURN)
-                time.sleep(1)
-            except NoSuchElementException:
-                try:
-                    next_next = self.driver.find_element_by_xpath("//button[@aria-label='Continue to next step']")
-                    next_next.send_keys(Keys.RETURN)
-                    time.sleep(1)
-                except NoSuchElementException:
-                    try:
-                        review = self.driver.find_element_by_xpath("//button[@aria-label='Review your application']")
-                        review.send_keys(Keys.RETURN)
-                        time.sleep(1)
-                    except NoSuchElementException:
-                        try:
-                            print("trying submit")
-                            submit = self.driver.find_element_by_xpath("//button[@aria-label='Submit application']")
-                            submit.send_keys(Keys.RETURN)
-                            time.sleep(2)
-                            print("Application submission done")
-                            close_confirm = self.driver.find_element_by_xpath("//button[@aria-label='Dismiss']")
-                            close_confirm.send_keys(Keys.RETURN)
-                        except NoSuchElementException:
-                            print("Not a direct application")
-                            self.close_application()
-                            
+                                
             
     def close_application(self):
         try:
@@ -232,7 +173,25 @@ class EasyApply:
             discard.send_keys(Keys.RETURN)
             time.sleep(1)
             discard_confirm = self.driver.find_element_by_xpath("//button[@data-control-name='discard_application_confirm_btn']")
-            discard_confirm.send_keys(Keys.RETURN)                     
+            discard_confirm.send_keys(Keys.RETURN)
+            job_url = self.driver.current_url
+            element = self.driver.find_element_by_class_name("disabled.ember-view.job-card-container__link.job-card-list__title")
+            job_title = element.text.strip()
+            print(job_title + ':' + job_url)
+            try:
+                wb = openpyxl.Workbook()
+                # Select the active worksheet
+                worksheet = wb.active
+                # Get the last row to append the new data
+                last_row = worksheet.max_row  
+                # Write the URL and job title to the next row
+                worksheet.cell(row=last_row+1, column=1, value=job_url)
+                worksheet.cell(row=last_row+1, column=2, value=job_title)
+                # Save the changes to the workbook
+                wb.save("wb.xlsx")
+            except None:
+                pass
+                          
         except NoSuchElementException:
             pass
         time.sleep(1) 
@@ -247,6 +206,14 @@ class EasyApply:
         # self.driver.maximize_window()
         self.login()
         time.sleep(5)
+        try:
+            wait = WebDriverWait(self.driver, 60)
+            verify = self.driver.find_element_by_xpath("//button[@aria-describedby='descriptionVerify']")
+            input("Please solve the captcha and press Enter to continue...")
+            captcha_element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "global-nav__content")))
+        except NoSuchElementException:
+            pass
+        
         self.job_search()
         time.sleep(5)
         self.job_search_filter()
